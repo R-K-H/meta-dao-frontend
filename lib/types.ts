@@ -66,6 +66,26 @@ export type OrderBook =
       failSpreadString: string;
     }
   | undefined;
+
+export type OpenBookOrderBook =
+  | {
+      bidsProcessed: OrderBookSide | null;
+      asksProcessed: OrderBookSide | null;
+      bidsArray: any[][];
+      asksArray: any[][];
+      toB: {
+        topAsk: number;
+        topBid: number;
+      };
+      spreadString: string;
+    }
+  | undefined;
+
+export type OpenBookMarket = {
+  asks: LeafNode[];
+  bids: LeafNode[];
+  market: MarketAccount;
+};
 export type Markets = {
   pass: MarketAccount;
   passAsks: LeafNode[];
