@@ -18,14 +18,14 @@ import { debounce } from '../lib/utils';
 import { useTransactionSender } from '@/hooks/useTransactionSender';
 
 export interface OpenBookInterface {
-  markets?: OpenBookMarket;
+  market?: OpenBookMarket;
   orders?: OpenOrdersAccountWithKey[];
   orderBookObject?: OpenBookOrderBook;
   loading: boolean;
   isCranking: boolean;
-  crankMarkets: (individualEvent?: PublicKey) => Promise<void>;
+  crankMarket: (individualEvent?: PublicKey) => Promise<void>;
   fetchOpenOrders: (owner: PublicKey) => Promise<void>;
-  fetchMarketsInfo: () => Promise<void>;
+  fetchMarketInfo: () => Promise<void>;
   placeOrderTransactions: (
     amount: number,
     price: number,
@@ -56,10 +56,10 @@ export const useOpenBook = () => {
 
 export function OpenBookProvider({
   children,
-  market,
+  marketId,
 }: {
   children: React.ReactNode;
-  market: MarketAccountWithKey;
+  marketId: string | undefined | null;
 }) {
   const { connection } = useConnection();
   const wallet = useWallet();
@@ -67,7 +67,7 @@ export function OpenBookProvider({
   const { placeOrderTransactions } = useOpenbookTwap();
   const sender = useTransactionSender();
   const [loading, setLoading] = useState(false);
-  const [markets, setMarkets] = useState<OpenBookMarket>();
+  const [market, setMarket] = useState<OpenBookMarket>();
   const [orders, setOrders] = useState<OpenOrdersAccountWithKey[]>([]);
   const [isCranking, setIsCranking] = useState<boolean>(false);
   const { crankMarketTransactions } = useOpenbookTwap();
@@ -80,13 +80,13 @@ export function OpenBookProvider({
 
   const { program: openbookTwap } = useOpenbookTwap();
 
-  const fetchMarketsInfo = useCallback(
+  const fetchMarketInfo = useCallback(
     debounce(async () => {
-      if (!market || !openbook || !openbookTwap || !openbookTwap.views || !connection) {
+      if (!marketId || !openbook || !openbookTwap || !openbookTwap.views || !connection) {
         return;
       }
       const accountInfos = await connection.getMultipleAccountsInfo([
-        market.publicKey,
+        new PublicKey(marketId),
       ]);
       if (!accountInfos || accountInfos.indexOf(null) >= 0) return;
 
@@ -105,42 +105,42 @@ export function OpenBookProvider({
         openbook,
       );
 
-      setMarkets({
+      setMarket({
         asks,
         bids,
         market: _market,
       });
     }, 1000),
-    [markets, openbook, connection],
+    [marketId, openbook, connection],
   );
   const fetchOpenOrders = useCallback(
     debounce<[PublicKey]>(async (owner: PublicKey) => {
-      if (!openbook || !market) {
+      if (!openbook || !marketId) {
         return;
       }
       const _orders = await openbook.account.openOrdersAccount.all([
         { memcmp: { offset: 8, bytes: owner.toBase58() } },
-        { memcmp: { offset: 40, bytes: market.publicKey.toBase58() } },
+        { memcmp: { offset: 40, bytes: new PublicKey(marketId).toBase58() } },
       ]);
       setOrders(
         _orders
           .sort((a, b) => (a.account.accountNum < b.account.accountNum ? 1 : -1)),
       );
     }, 1000),
-    [openbook, market],
+    [openbook, marketId],
   );
 
   useEffect(() => {
     if (wallet.publicKey) {
       fetchOpenOrders(wallet.publicKey);
     }
-  }, [markets, fetchOpenOrders]);
+  }, [market, fetchOpenOrders]);
 
   useEffect(() => {
-    if (!markets) {
-      fetchMarketsInfo();
+    if (!market) {
+      fetchMarketInfo();
     }
-  }, [markets, fetchMarketsInfo]);
+  }, [market, fetchMarketInfo]);
 
   const orderBookObject = useMemo(() => {
     const getSide = (side: LeafNode[], isBidSide?: boolean) => {
@@ -211,23 +211,30 @@ export function OpenBookProvider({
         : `${spread.toFixed(2).toString()} (${spreadPercent}%)`;
     };
 
-    if (markets) {
+    if (market) {
       return {
-        bidsProcessed: getSide(markets.bids, true),
-        asksProcessed: getSide(markets.asks),
-        bidsArray: orderBookSide(markets.bids, true),
-        asksArray: orderBookSide(markets.asks),
-        toB: getToB(markets.bids, markets.asks),
-        spreadString: getSpreadString(markets.bids, markets.asks),
+        bidsProcessed: getSide(market.bids, true),
+        asksProcessed: getSide(market.asks),
+        bidsArray: orderBookSide(market.bids, true),
+        asksArray: orderBookSide(market.asks),
+        toB: getToB(market.bids, market.asks),
+        spreadString: getSpreadString(market.bids, market.asks),
       };
     }
     return undefined;
-  }, [markets]);
+  }, [market]);
 
   const placeOrder = useCallback(
     async (amount: number, price: number, limitOrder?: boolean, ask?: boolean, pass?: boolean) => {
-      if (!markets) return;
-      const placeTxs = await placeOrderTransactions(amount, price, market, limitOrder, ask, pass);
+      if (!marketId || !market) return;
+      const _market = { publicKey: new PublicKey(marketId), account: market.market };
+      const placeTxs = await placeOrderTransactions(
+        amount,
+        price,
+        _market,
+        limitOrder,
+        ask,
+        pass);
 
       if (!placeTxs || !wallet.publicKey) {
         return;
@@ -237,7 +244,7 @@ export function OpenBookProvider({
         setLoading(true);
 
         await sender.send(placeTxs);
-        await fetchMarketsInfo();
+        await fetchMarketInfo();
         await fetchOpenOrders(wallet.publicKey);
       } catch (err) {
         console.error(err);
@@ -247,35 +254,30 @@ export function OpenBookProvider({
     },
     [
       wallet,
-      markets,
+      marketId,
       connection,
       sender,
       placeOrderTransactions,
-      fetchMarketsInfo,
+      fetchMarketInfo,
       fetchOpenOrders,
     ],
   );
 
-  const crankMarkets = useCallback(
+  const crankMarket = useCallback(
     async (individualEvent?: PublicKey) => {
-      if (!markets || !wallet?.publicKey) return;
+      if (!market || !marketId || !wallet?.publicKey) return;
       try {
         setIsCranking(true);
-        const passTxs = await crankMarketTransactions(
+        const marketTxs = await crankMarketTransactions(
           {
-            publicKey: market.publicKey,
-            account: markets.market,
+            publicKey: new PublicKey(marketId),
+            account: market.market,
           },
-          markets.market.eventHeap,
+          market.market.eventHeap,
           individualEvent,
         );
-        const failTxs = await crankMarketTransactions(
-          { publicKey: market.publicKey, account: markets.market },
-          markets.market.eventHeap,
-          individualEvent,
-        );
-        if (!passTxs || !failTxs) return;
-        const txs = [...passTxs, ...failTxs].filter(Boolean);
+        if (!marketTxs) return;
+        const txs = [...marketTxs].filter(Boolean);
         await sender.send(txs as VersionedTransaction[]);
         fetchOpenOrders(wallet.publicKey);
       } catch (err) {
@@ -284,20 +286,20 @@ export function OpenBookProvider({
         setIsCranking(false);
       }
     },
-    [markets, wallet.publicKey, sender, crankMarketTransactions, fetchOpenOrders],
+    [market, marketId, wallet.publicKey, sender, crankMarketTransactions, fetchOpenOrders],
   );
 
   return (
     <openBookContext.Provider
       value={{
-        markets,
+        market,
         orders,
         orderBookObject,
         loading,
         isCranking,
         fetchOpenOrders,
-        fetchMarketsInfo,
-        crankMarkets,
+        fetchMarketInfo,
+        crankMarket,
         placeOrderTransactions,
         placeOrder,
       }}
