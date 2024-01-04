@@ -1,15 +1,23 @@
+import { useState } from 'react';
 import {
   Text,
   Group,
   Loader,
   Button,
   Stack,
+  Card,
 } from '@mantine/core';
 import { utf8 } from '@coral-xyz/anchor/dist/cjs/utils/bytes';
 import { useOpenBookMarket } from '@/contexts/OpenBookMarketContext';
+import { OrderBookCard } from '../OrderBook/OrderBookCard';
+import { OrderConfigurationCard } from '../OrderBook/OrderConfigurationCard';
 
 export function MarketDetailCard() {
   const openBookMarket = useOpenBookMarket();
+  const [price, setPrice] = useState<string>('');
+  const setPriceFromOrderBook = (value: string) => {
+    setPrice(value);
+  };
   return openBookMarket.loading || !openBookMarket.market ? (
     <Group justify="center">
       <Loader />
@@ -48,6 +56,17 @@ export function MarketDetailCard() {
           Crank
         </Button>
         </Group>
+        <Card>
+          <OrderBookCard
+            orderBookObject={openBookMarket.orderBookObject}
+            setPriceFromOrderBook={setPriceFromOrderBook}
+          />
+          <OrderConfigurationCard
+            setPrice={setPrice}
+            price={price}
+            orderBookObject={openBookMarket.orderBookObject}
+          />
+        </Card>
     </>
   );
 }
