@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { Layout } from '@/components/Layout/Layout';
-import { OpenBookProvider } from '@/contexts/OpenBookContext';
+import { OpenBookMarketProvider } from '@/contexts/OpenBookMarketContext';
 import { MarketDetailCard } from '@/components/Markets/MarketDetailCard';
 
 export default function ProposalsPage() {
@@ -11,9 +11,9 @@ export default function ProposalsPage() {
 
   return (
     <Layout>
-      <OpenBookProvider marketId={marketId}>
+      <OpenBookMarketProvider marketId={marketId}>
         <MarketDetailCard />
-      </OpenBookProvider>
+      </OpenBookMarketProvider>
     </Layout>
   );
 }

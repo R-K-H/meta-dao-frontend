@@ -3,12 +3,12 @@
 import { useRouter } from 'next/navigation';
 //import { useMemo } from 'react';
 import { Group, Loader, Stack, Text, UnstyledButton } from '@mantine/core';
+import { useOpenBook } from '@/contexts/OpenBookContext';
 
 export default function MarketsList() {
   const router = useRouter();
-  // TODO: Need to fetch all openbookv2 markets
-  //const markets = useMemo();
-  const markets: [any] = [{ publicKey: '123123' }];
+  const openbook = useOpenBook();
+  const { markets } = openbook;
 
   if (markets === undefined) {
     return (
@@ -23,9 +23,9 @@ export default function MarketsList() {
       {markets.length > 0 ? (
         <Stack gap="xl">
           {markets?.map((market) => (
-            <UnstyledButton onClick={() => router.push(`/market?id=${market.publicKey}`)}>
+            <UnstyledButton onClick={() => router.push(`/market?id=${market.market}`)}>
             <Text opacity={0.6}>
-                Market 1
+                {market.name}
             </Text>
             </UnstyledButton>
           ))}
