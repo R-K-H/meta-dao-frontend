@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import {
   ActionIcon,
   Stack,
@@ -15,16 +15,19 @@ import { IconWallet } from '@tabler/icons-react';
 import numeral from 'numeral';
 import { OpenBookOrderBook as _OrderBook } from '@/lib/types';
 import { BASE_FORMAT, NUMERAL_FORMAT } from '../../lib/constants';
-import { useOpenBookMarket } from '@/contexts/OpenBookMarketContext';
 
 export function OrderConfigurationCard({
   setPrice,
   price,
   orderBookObject,
+  handlePlaceOrder,
+  isPlacingOrder,
 }: {
   setPrice: (price: string) => void;
   price: string;
   orderBookObject: _OrderBook;
+  handlePlaceOrder: () => void;
+  isPlacingOrder: boolean;
 }) {
   // TODO: Review this as anything less than this fails to work
   const minMarketPrice = 10;
@@ -40,31 +43,6 @@ export function OrderConfigurationCard({
   const isLimitOrder = orderType === 'Limit';
   const [priceError, setPriceError] = useState<string | null>(null);
   const [amountError, setAmountError] = useState<string | null>(null);
-  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  const { placeOrder } = useOpenBookMarket();
-
-  const _orderPrice = () => {
-    if (isLimitOrder) {
-      if (Number(price) > 0) {
-        return Number(price);
-      }
-      // TODO: This is not a great value or expected behavior.. We need to throw error..
-      return 0;
-    }
-    if (orderSide === 'Sell') {
-      return minMarketPrice;
-    }
-    return maxMarketPrice;
-  };
-
-  const handlePlaceOrder = useCallback(async () => {
-    try {
-      setIsPlacingOrder(true);
-      await placeOrder(amount, _orderPrice(), isLimitOrder, isAskSide);
-    } finally {
-      setIsPlacingOrder(false);
-    }
-  }, [placeOrder, amount, isLimitOrder, isAskSide]);
 
   const changeOrderSide = (side: string) => {
     // Clear out our errors

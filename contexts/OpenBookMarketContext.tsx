@@ -22,6 +22,7 @@ import { useOpenbook } from '@/hooks/useOpenbook';
 
 export interface OpenBookMarketInterface {
   market?: OpenBookMarket;
+  marketPubkey: PublicKey;
   orders?: OpenOrdersAccountWithKey[];
   orderBookObject?: OpenBookOrderBook;
   loading: boolean;
@@ -81,6 +82,9 @@ export function OpenBookMarketProvider({
     }
     return new Program<OpenbookV2>(OPENBOOK_IDL, OPENBOOK_PROGRAM_ID, provider);
   }, [provider]);
+
+  // @ts-ignore
+  const marketPubkey = new PublicKey(marketId);
 
   const _openbook = useOpenbook();
 
@@ -339,6 +343,7 @@ export function OpenBookMarketProvider({
     <openBookMarketContext.Provider
       value={{
         market,
+        marketPubkey,
         orders,
         orderBookObject,
         loading,

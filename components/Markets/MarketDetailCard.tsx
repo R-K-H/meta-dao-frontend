@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   Text,
   Group,
@@ -11,6 +11,7 @@ import { utf8 } from '@coral-xyz/anchor/dist/cjs/utils/bytes';
 import { useOpenBookMarket } from '@/contexts/OpenBookMarketContext';
 import { OrderBookCard } from '../OrderBook/OrderBookCard';
 import { OrderConfigurationCard } from '../OrderBook/OrderConfigurationCard';
+import { useOpenbook } from '@/hooks/useOpenbook';
 
 export function MarketDetailCard() {
   const openBookMarket = useOpenBookMarket();
@@ -18,6 +19,44 @@ export function MarketDetailCard() {
   const setPriceFromOrderBook = (value: string) => {
     setPrice(value);
   };
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const openbook = useOpenbook();
+
+  const _orderPrice = () => Number(price);
+
+  const handlePlaceOrder = useCallback(async () => {
+//     if (!openBookMarket) return;
+//     try {
+//       setIsPlacingOrder(true);
+//       await openbook.placeOrder(
+//         // openOrdersPublicKey
+//         openBookMarket.orders[0].publicKey,
+//         // marketPublicKey
+//         openBookMarket.marketPubkey,
+//         // market
+//         openBookMarket.market,
+//         // userTokenAccount
+
+//         // openOrdersAdmin
+//         // args
+//         // remainingAccounts
+//         // openOrdersDelegate
+//         .false,
+//         openBookMarket.market?.market
+//         .wallet.account,
+//         openBookMarket.market?.market.openOrdersAdmin,
+
+//         amount,
+// _orderPrice(),
+// isLimitOrder,
+// isAskSide);
+//     } finally {
+//       setIsPlacingOrder(false);
+//     }
+  }, []);
+
+  //placeOrder, amount, isLimitOrder, isAskSide
+
   return openBookMarket.loading || !openBookMarket.market ? (
     <Group justify="center">
       <Loader />
@@ -65,6 +104,8 @@ export function MarketDetailCard() {
             setPrice={setPrice}
             price={price}
             orderBookObject={openBookMarket.orderBookObject}
+            handlePlaceOrder={handlePlaceOrder}
+            isPlacingOrder={isPlacingOrder}
           />
         </Card>
     </>
